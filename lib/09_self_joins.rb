@@ -203,6 +203,24 @@ def start_at_craiglockhart
   # by taking one bus, including 'Craiglockhart' itself. Include the stop name,
   # as well as the company and bus no. of the relevant service.
   execute(<<-SQL)
+    SELECT
+      end_route_stops.name, end_route.company, end_route.num
+    FROM
+      routes AS start_route
+    JOIN
+      routes AS end_route ON (start_route.company = end_route.company AND start_route.num = end_route.num)
+    JOIN
+      stops AS end_route_stops ON (end_route.stop_id = end_route_stops.id)
+    WHERE
+      start_route.stop_id = (
+        SELECT
+          stops.id
+        FROM
+          stops
+        WHERE
+          stops.name = 'Craiglockhart'
+      )
+
   SQL
 end
 
@@ -211,5 +229,34 @@ def craiglockhart_to_sighthill
   # Sighthill. Show the bus no. and company for the first bus, the name of the
   # stop for the transfer, and the bus no. and company for the second bus.
   execute(<<-SQL)
+    SELECT DISTINCT
+      start.num, start.company, transfer.name, finish.num, finish.company
+    FROM
+      routes AS start
+    JOIN
+      routes AS to_transfer ON start.num = to_transfer.num AND start.company = to_transfer.company
+    JOIN
+      stops AS transfer ON to_transfer.stop_id = transfer.id
+    JOIN
+      routes AS from_transfer ON transfer.id = from_transfer.stop_id
+    JOIN
+      routes AS finish ON finish.num = from_transfer.num AND finish.company = from_transfer.company
+    WHERE
+      start.stop_id IN (
+        SELECT
+          id
+        FROM
+          stops
+        WHERE
+          name = 'Craiglockhart'
+      ) AND finish.stop_id IN (
+          SELECT
+            id
+          FROM
+            stops
+          WHERE
+            name = 'Sighthill'
+      )
+
   SQL
 end
